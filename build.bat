@@ -29,15 +29,15 @@ for /f "tokens=*" %%i in ('where g++') do (
 echo [Compiler] Using GCC: %GXX_PATH%
 
 echo [Build] Compiling deeptrace-mt.exe (Multi-threaded Engine)...
-g++ -std=c++17 -O2 -I include src/dpi_mt.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-mt.exe"
+g++ -std=c++17 -O2 -static -I include src/dpi_mt.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-mt.exe"
 if errorlevel 1 goto build_err
 
 echo [Build] Compiling deeptrace-simple.exe (Single-threaded Engine)...
-g++ -std=c++17 -O2 -I include src/main_simple.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-simple.exe"
+g++ -std=c++17 -O2 -static -I include src/main_simple.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-simple.exe"
 if errorlevel 1 goto build_err
 
 echo [Build] Compiling packet-analyzer.exe (Packet Inspector)...
-g++ -std=c++17 -O2 -I include src/main.cpp src/pcap_reader.cpp src/packet_parser.cpp src/types.cpp -o "%BIN_DIR%\packet-analyzer.exe"
+g++ -std=c++17 -O2 -static -I include src/main.cpp src/pcap_reader.cpp src/packet_parser.cpp src/types.cpp -o "%BIN_DIR%\packet-analyzer.exe"
 if errorlevel 1 goto build_err
 
 goto build_success
