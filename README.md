@@ -1,5 +1,83 @@
-# DPI Engine - Deep Packet Inspection System
+# 🔍 DeepTrace — Multi-Threaded Deep Packet Inspection (DPI) & Firewall Engine
 
+[![C++17](https://img.shields.io/badge/Language-C%2B%2B17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+[![Build](https://img.shields.io/badge/Build-CMake%20%7C%20MSVC%20%7C%20GCC-green.svg)](CMakeLists.txt)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Architecture](https://img.shields.io/badge/Architecture-Pipelined%20Multi--Threaded-orange.svg)]()
+
+> **DeepTrace** is a high-throughput Layer 7 Deep Packet Inspection (DPI) engine and stateful firewall written in modern C++17. It analyzes raw PCAP network captures, identifies encrypted applications (YouTube, Google, TikTok, Facebook, etc.) by extracting **TLS Client Hello SNI** handshakes, and enforces granular filtering rules across a concurrent multi-threaded worker pipeline with **consistent 5-tuple hashing**.
+
+---
+
+## 🚀 30-Second Quickstart
+
+```bash
+# 1. Clone repository
+git clone https://github.com/tech-tanush/DeepTrace-Multithreaded-Deep-Packet-Inspection-Engine.git
+cd DeepTrace-Multithreaded-Deep-Packet-Inspection-Engine
+
+# 2. Build executables
+.\build.bat
+# Or on Linux/macOS: cmake -B build && cmake --build build --config Release
+
+# 3. Generate synthetic network traffic
+python generate_test_pcap.py
+
+# 4. Inspect & block YouTube + blacklisted IP
+.\bin\deeptrace-mt.exe test_dpi.pcap output.pcap --block-app YouTube --block-ip 192.168.1.50
+```
+
+### 📸 Live Inspection Report Preview
+
+```text
+╔══════════════════════════════════════════════════════════════╗
+║              DPI ENGINE v2.0 (Multi-threaded)                ║
+╠══════════════════════════════════════════════════════════════╣
+║ Load Balancers:  2    FPs per LB:  2    Total FPs:  4        ║
+╚══════════════════════════════════════════════════════════════╝
+
+[Rules] Blocked IP: 192.168.1.50
+[Rules] Blocked app: YouTube
+[Reader] Processing packets... Done reading 77 packets
+
+╔══════════════════════════════════════════════════════════════╗
+║                      PROCESSING REPORT                       ║
+╠══════════════════════════════════════════════════════════════╣
+║ Total Packets:                77                             ║
+║ Forwarded:                    71                             ║
+║ Dropped:                       6  (1 YouTube + 5 from IP)    ║
+╠══════════════════════════════════════════════════════════════╣
+║                   APPLICATION BREAKDOWN                      ║
+╠══════════════════════════════════════════════════════════════╣
+║ HTTPS                39  50.6% ##########                    ║
+║ Unknown              16  20.8% ####                          ║
+║ DNS                   4   5.2% #                             ║
+║ Twitter/X             3   3.9%                               ║
+║ YouTube               1   1.3% (BLOCKED & DROPPED)           ║
+╚══════════════════════════════════════════════════════════════╝
+
+[Detected Domains/SNIs]
+  - www.youtube.com -> YouTube (Blocked)
+  - www.google.com -> Google
+  - www.facebook.com -> Facebook
+  - discord.com -> Discord
+
+Output written to: output.pcap
+```
+
+---
+
+## ✨ Key Highlights
+
+* **Layer 7 TLS SNI Extraction**: Inspects TLS 1.2 & 1.3 `Client Hello` handshakes to extract destination domain names in plaintext before HTTPS encryption locks the payload.
+* **Consistent 5-Tuple Hashing**: Hashes `(src_ip, dst_ip, src_port, dst_port, protocol)` to bind entire bidirectional conversations to dedicated Fast Path worker threads, achieving **zero lock contention** on flow state tables.
+* **Multi-Stage Concurrent Pipeline**: Separates I/O ingestion (`Reader Thread`), packet routing (`Load Balancers`), deep inspection (`Fast Path Workers`), and disk serialization (`Writer Thread`).
+* **Zero External Dependencies**: Pure C++17 standard library and portable byte manipulation without requiring heavy third-party PCAP libraries.
+* **Stateful Connection Tracking & Sanitization**: Tracks TCP state machines (SYN, SYN-ACK, FIN) and outputs clean, filtered PCAP files ready for network replay or Wireshark inspection.
+
+---
+
+## Complete Documentation & Architecture Guide
 
 This document explains **everything** about this project - from basic networking concepts to the complete code architecture. After reading this, you should understand exactly how packets flow through the system without needing to read the code.
 
