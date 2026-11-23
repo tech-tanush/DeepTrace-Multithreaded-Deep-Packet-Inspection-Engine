@@ -138,8 +138,9 @@ TLS Client Hello:
 
 | Version | File | Use Case |
 |---------|------|----------|
-| Simple (Single-threaded) | `src/main_working.cpp` | Learning, small captures |
-| Multi-threaded | `src/dpi_mt.cpp` | Production, large captures |
+| Simple (Single-threaded) | `src/main_simple.cpp` | Learning, debugging, small captures |
+| Multi-threaded (Standalone) | `src/dpi_mt.cpp` | High-performance monolithic pipeline |
+| Multi-threaded (Modular) | `src/main_dpi.cpp` | Scalable object-oriented engine |
 
 ---
 
@@ -164,8 +165,9 @@ packet_analyzer/
 │   ├── packet_parser.cpp      # Protocol parsing
 │   ├── sni_extractor.cpp      # SNI/Host extraction
 │   ├── types.cpp              # Helper functions
-│   ├── main_working.cpp       # ★ SIMPLE VERSION ★
+│   ├── main_simple.cpp        # ★ SIMPLE VERSION ★
 │   ├── dpi_mt.cpp             # ★ MULTI-THREADED VERSION ★
+│   ├── main_dpi.cpp           # ★ MODULAR MULTI-THREADED CLI ★
 │   └── [other files]          # Supporting code
 │
 ├── generate_test_pcap.py      # Creates test data
@@ -177,7 +179,7 @@ packet_analyzer/
 
 ## 5. The Journey of a Packet (Simple Version)
 
-Let's trace a single packet through `main_working.cpp`:
+Let's trace a single packet through `main_simple.cpp`:
 
 ### Step 1: Read PCAP File
 
@@ -872,10 +874,28 @@ Connection to YouTube:
 
 ### Build Commands
 
+#### Option A: Using CMake (Cross-Platform)
+```bash
+cmake -B build
+cmake --build build --config Release
+```
+This builds all four targets into `build/bin/`:
+- `deeptrace` (Modular Multi-threaded Engine)
+- `deeptrace-mt` (Standalone Multi-threaded Engine)
+- `deeptrace-simple` (Single-threaded Engine)
+- `packet-analyzer` (Protocol Inspector)
+
+#### Option B: Using Windows Build Script
+```cmd
+build.bat
+```
+
+#### Option C: Direct Compiler Commands
+
 **Simple Version:**
 ```bash
 g++ -std=c++17 -O2 -I include -o dpi_simple \
-    src/main_working.cpp \
+    src/main_simple.cpp \
     src/pcap_reader.cpp \
     src/packet_parser.cpp \
     src/sni_extractor.cpp \
@@ -1048,6 +1068,6 @@ The key insight is that even HTTPS traffic leaks the destination domain in the T
 
 ## Questions?
 
-If you have questions about any part of this project, the code is well-commented and follows the same flow described in this document. Start with the simple version (`main_working.cpp`) to understand the concepts, then move to the multi-threaded version (`dpi_mt.cpp`) to see how parallelism is added.
+If you have questions about any part of this project, the code is well-commented and follows the same flow described in this document. Start with the simple version (`main_simple.cpp`) to understand the concepts, then move to the multi-threaded version (`dpi_mt.cpp`) to see how parallelism is added.
 
 Happy learning! 🚀
