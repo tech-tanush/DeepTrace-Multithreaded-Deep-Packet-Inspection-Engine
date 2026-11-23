@@ -5,95 +5,85 @@ echo ============================================================
 echo               DeepTrace Build Script (Windows)
 echo ============================================================
 
+REM Prioritize modern 64-bit GCC (MSYS2 UCRT64 / MINGW64 / w64devkit) over legacy C:\MinGW
+if exist "C:\msys64\ucrt64\bin\g++.exe" set "PATH=C:\msys64\ucrt64\bin;%PATH%"
+if exist "C:\msys64\mingw64\bin\g++.exe" set "PATH=C:\msys64\mingw64\bin;%PATH%"
+if exist "C:\w64devkit\bin\g++.exe" set "PATH=C:\w64devkit\bin;%PATH%"
+
 set "BIN_DIR=%~dp0bin"
 if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
 
 REM 1. Check for MSVC (cl.exe)
 where cl >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    echo [Compiler] Detected MSVC cl.exe
-    echo [Build] Building deeptrace-mt.exe...
-    cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\deeptrace-mt.exe" ^
-        src\dpi_mt.cpp src\pcap_reader.cpp src\packet_parser.cpp src\sni_extractor.cpp src\types.cpp
-    if errorlevel 1 goto build_err
+if %ERRORLEVEL% equ 0 goto use_msvc
 
-    echo [Build] Building deeptrace-simple.exe...
-    cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\deeptrace-simple.exe" ^
-        src\main_simple.cpp src\pcap_reader.cpp src\packet_parser.cpp src\sni_extractor.cpp src\types.cpp
-    if errorlevel 1 goto build_err
+REM 2. Check for modern GCC
+where g++ >nul 2>&1
+if %ERRORLEVEL% neq 0 goto no_compiler
 
-    echo [Build] Building packet-analyzer.exe...
-    cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\packet-analyzer.exe" ^
-        src\main.cpp src\pcap_reader.cpp src\packet_parser.cpp src\types.cpp
-    if errorlevel 1 goto build_err
-
-    echo [Success] Executables successfully built in .\bin\
-    exit /b 0
+set "GXX_PATH="
+for /f "tokens=*" %%i in ('where g++') do (
+    if not defined GXX_PATH set "GXX_PATH=%%i"
 )
 
-REM 2. Check for working GCC (test --version to avoid broken 32-bit runtimes)
-set "GXX="
+echo [Compiler] Using GCC: %GXX_PATH%
 
-REM Check PATH
-g++ --version >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    set "GXX=g++"
-) else if exist "C:\msys64\ucrt64\bin\g++.exe" (
-    "C:\msys64\ucrt64\bin\g++.exe" --version >nul 2>&1
-    if !ERRORLEVEL! equ 0 set "GXX=C:\msys64\ucrt64\bin\g++.exe"
-) else if exist "C:\msys64\mingw64\bin\g++.exe" (
-    "C:\msys64\mingw64\bin\g++.exe" --version >nul 2>&1
-    if !ERRORLEVEL! equ 0 set "GXX=C:\msys64\mingw64\bin\g++.exe"
-)
+echo [Build] Compiling deeptrace-mt.exe (Multi-threaded Engine)...
+g++ -std=c++17 -O2 -I include src/dpi_mt.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-mt.exe"
+if errorlevel 1 goto build_err
 
-if defined GXX (
-    echo [Compiler] Detected functional GCC: %GXX%
-    echo [Build] Building deeptrace-mt.exe...
-    "%GXX%" -std=c++17 -O2 -I include src/dpi_mt.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-mt.exe"
-    if errorlevel 1 goto build_err
+echo [Build] Compiling deeptrace-simple.exe (Single-threaded Engine)...
+g++ -std=c++17 -O2 -I include src/main_simple.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-simple.exe"
+if errorlevel 1 goto build_err
 
-    echo [Build] Building deeptrace-simple.exe...
-    "%GXX%" -std=c++17 -O2 -I include src/main_simple.cpp src/pcap_reader.cpp src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp -o "%BIN_DIR%\deeptrace-simple.exe"
-    if errorlevel 1 goto build_err
+echo [Build] Compiling packet-analyzer.exe (Packet Inspector)...
+g++ -std=c++17 -O2 -I include src/main.cpp src/pcap_reader.cpp src/packet_parser.cpp src/types.cpp -o "%BIN_DIR%\packet-analyzer.exe"
+if errorlevel 1 goto build_err
 
-    echo [Build] Building packet-analyzer.exe...
-    "%GXX%" -std=c++17 -O2 -I include src/main.cpp src/pcap_reader.cpp src/packet_parser.cpp src/types.cpp -o "%BIN_DIR%\packet-analyzer.exe"
-    if errorlevel 1 goto build_err
+goto build_success
 
-    echo [Success] Executables successfully built in .\bin\
-    exit /b 0
-)
+:use_msvc
+echo [Compiler] Detected MSVC cl.exe
+echo [Build] Compiling deeptrace-mt.exe...
+cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\deeptrace-mt.exe" ^
+    src\dpi_mt.cpp src\pcap_reader.cpp src\packet_parser.cpp src\sni_extractor.cpp src\types.cpp
+if errorlevel 1 goto build_err
 
-REM 3. Check for CMake
-where cmake >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    echo [Build] Detected CMake. Configuring build directory...
-    cmake -B build
-    if errorlevel 1 goto build_err
-    cmake --build build --config Release
-    if errorlevel 1 goto build_err
-    exit /b 0
-)
+echo [Build] Compiling deeptrace-simple.exe...
+cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\deeptrace-simple.exe" ^
+    src\main_simple.cpp src\pcap_reader.cpp src\packet_parser.cpp src\sni_extractor.cpp src\types.cpp
+if errorlevel 1 goto build_err
 
+echo [Build] Compiling packet-analyzer.exe...
+cl /nologo /EHsc /std:c++17 /O2 /I include /Fe:"%BIN_DIR%\packet-analyzer.exe" ^
+    src\main.cpp src\pcap_reader.cpp src\packet_parser.cpp src\types.cpp
+if errorlevel 1 goto build_err
+
+goto build_success
+
+:build_success
 echo.
-echo [!] No working C++17 compiler found on your system.
-echo     (Note: Found 'C:\MinGW\bin\g++.exe' but it failed system runtime check)
+echo ============================================================
+echo [Success] All executables successfully built in .\bin\
+echo ============================================================
+echo You can now run:
+echo   .\bin\deeptrace-mt.exe test_dpi.pcap output.pcap --block-app YouTube
+exit /b 0
+
+:no_compiler
 echo.
-echo To build DeepTrace on Windows, please install one of the following:
+echo ============================================================
+echo               C++17 Compiler Required
+echo ============================================================
+echo DeepTrace requires a 64-bit compiler with C++17 support.
 echo.
-echo   Option 1 (Recommended - MSYS2 UCRT64):
-echo     1. Download installer from: https://www.msys2.org/
-echo     2. In MSYS2 terminal, run:
-echo          pacman -S mingw-w64-ucrt-x86_64-gcc
-echo     3. Add 'C:\msys64\ucrt64\bin' to your Windows PATH
-echo.
-echo   Option 2 (Visual Studio 2022 Community):
-echo     1. Install 'Desktop development with C++' workload
-echo     2. Run build.bat from 'Developer Command Prompt for VS 2022'
-echo.
+echo Please install MSYS2 UCRT64:
+echo   1. Download and install from https://www.msys2.org/
+echo   2. Run in MSYS2 terminal: pacman -S mingw-w64-ucrt-x86_64-gcc
+echo   3. Re-run .\build.bat
 exit /b 1
 
 :build_err
 echo.
-echo [Error] Compilation failed. Please check the compiler output above.
+echo [Error] Compilation failed.
 exit /b 1
